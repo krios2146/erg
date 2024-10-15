@@ -1,4 +1,4 @@
 (executable
- (public_name http_server)
+ (public_name erg)
  (name main)
  (libraries server))
