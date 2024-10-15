@@ -17,12 +17,13 @@ let handle_client socket =
 
   if received_bytes > 0 then (
     let data = Bytes.sub_string buffer 0 received_bytes in
-    Printf.printf "Recieved data: '%s' \n" data;
+    Printf.printf "Recieved data:\n[\n%s\n]\n" data;
     ignore (Unix.write socket buffer 0 received_bytes));
 
   Unix.close socket
 
 let rec accept_connection server_socket =
+  Printf.printf "Accepting connections\n";
   let client_socket, client_address = Unix.accept server_socket in
   let client_inet_address =
     match client_address with
@@ -41,4 +42,4 @@ let run_server port =
   Printf.printf "Server listening on port '%d' \n" port;
   accept_connection server_socket
 
-let stop_server = accepting_connections := false
+let stop_server () = accepting_connections := false
