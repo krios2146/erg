@@ -1,3 +1,26 @@
+type error =
+  | No_request_line
+  | Empty_request_line
+  | Incomplete_request_line
+  | Malformed_request_line
+
+(* let http_version = "HTTP/1.1" *)
+(* let cr = '\r' *)
+(* let lf = '\n' *)
+(* let ht = '\t' *)
+let sp = ' '
+let crlf = "\r\n"
+
+(* type http_method = *)
+(*   | OPTIONS *)
+(*   | GET *)
+(*   | HEAD *)
+(*   | POST *)
+(*   | PUT *)
+(*   | DELETE *)
+(*   | TRACE *)
+(*   | CONNECT *)
+
 let accepting_connections = ref true
 
 let create_server_socket port =
@@ -21,9 +44,51 @@ let create_server_socket port =
           m "Unknown error occured while creating server socket on port %d" port);
       None
 
+let find_substring_index s sub =
+  let s_len = String.length s in
+  let sub_len = String.length sub in
+  let rec aux i =
+    if i > s_len then None
+    else if String.sub s i sub_len = sub then Some i
+    else aux (i + 1)
+  in
+  aux 0
+
+let parse_request_line req_line =
+  let req_line_parts = String.split_on_char sp req_line in
+  match req_line_parts with
+  | [] -> Error Empty_request_line
+  | [ _; _ ] -> Error Incomplete_request_line
+  | [ http_method; uri; version ] ->
+      Ok
+        (Printf.sprintf "Method: %s Request-URI: %s HTTP-Version: %s"
+           http_method uri version)
+  | _ -> Error Malformed_request_line
+
 let handle_tcp_client_data data =
   Log.debug (fun m -> m "Recieved data:\n%s" data);
-  data
+  let crlf_index = find_substring_index data crlf in
+  let request_line =
+    match crlf_index with
+    | None -> Error No_request_line
+    | Some i -> parse_request_line (String.sub data 0 i)
+  in
+  request_line
+
+let error_to_string err =
+  match err with
+  | No_request_line -> "No_request_line"
+  | Empty_request_line -> "Empty_request_line"
+  | Incomplete_request_line -> "Incomplete_request_line"
+  | Malformed_request_line -> "Malformed_request_line"
+
+let write_http_response socket data =
+  let status_line = "HTTP/1.1 501 Not Implemented \r\n" in
+  let entity = data in
+  let response = status_line ^ crlf ^ entity in
+  let response_bytes = Bytes.of_string response in
+  let response_length = Bytes.length response_bytes in
+  ignore (Unix.write socket response_bytes 0 response_length)
 
 let handle_client socket =
   let buffer = Bytes.create 1024 in
@@ -32,11 +97,9 @@ let handle_client socket =
   (if received_bytes > 0 then
      let data = Bytes.sub_string buffer 0 received_bytes in
      let handeled_data = handle_tcp_client_data data in
-     let handeled_data_bytes = Bytes.of_string handeled_data in
-     ignore
-       (Unix.write socket handeled_data_bytes 0
-          (Bytes.length handeled_data_bytes)));
-
+     match handeled_data with
+     | Error e -> write_http_response socket (error_to_string e)
+     | Ok data -> write_http_response socket data);
   Unix.close socket
 
 let accept_connection server_socket =
