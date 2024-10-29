@@ -1,5 +1,4 @@
 type error =
-  (* | No_request_line *)
   | Empty_request_line
   | Incomplete_request_line
   | Malformed_request_line
@@ -30,7 +29,6 @@ type http_request = {
 
 let error_to_string err =
   match err with
-  (* | No_request_line -> "No_request_line" *)
   | Empty_request_line -> "Empty_request_line"
   | Incomplete_request_line -> "Incomplete_request_line"
   | Malformed_request_line -> "Malformed_request_line"
@@ -106,16 +104,6 @@ let create_server_socket port =
       Log.error (fun m ->
           m "Unknown error occured while creating server socket on port %d" port);
       None
-
-(* let find_substring_index s sub = *)
-(*   let s_len = String.length s in *)
-(*   let sub_len = String.length sub in *)
-(*   let rec aux i = *)
-(*     if i > s_len then None *)
-(*     else if String.sub s i sub_len = sub then Some i *)
-(*     else aux (i + 1) *)
-(*   in *)
-(*   aux 0 *)
 
 let parse_request_line req_line =
   let req_line_parts = String.split_on_char sp req_line in
