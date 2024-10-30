@@ -1,3 +1,3 @@
 (test
- (name test_http_server_ocaml)
- (libraries server threads oUnit unix))
+ (name unit_tests)
+ (libraries server oUnit))

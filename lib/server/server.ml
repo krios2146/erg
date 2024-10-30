@@ -4,6 +4,8 @@ type error =
   | Malformed_request_line
   | Unknown_method
   | Malformed_request
+  | Unknown_header
+  | Malformed_header
 
 type http_method =
   | OPTIONS
@@ -14,6 +16,55 @@ type http_method =
   | DELETE
   | TRACE
   | CONNECT
+
+type general_header =
+  | CacheControl of string
+  | Connection of string
+  | Date of string
+  | Pragma of string
+  | Trailer of string
+  | TransferEncoding of string
+  | Upgrade of string
+  | Via of string
+  | Warning of string
+
+type request_header =
+  | Accept of string
+  | AcceptCharset of string
+  | AcceptEncoding of string
+  | AcceptLanguage of string
+  | Authorization of string
+  | Expect of string
+  | From of string
+  | Host of string
+  | IfMatch of string
+  | IfModifiedSince of string
+  | IfNoneMatch of string
+  | IfRange of string
+  | IfUnmodifiedSince of string
+  | MaxForwards of string
+  | ProxyAuthorization of string
+  | Range of string
+  | Referer of string
+  | TE of string
+  | UserAgent of string
+
+type entity_header =
+  | Allow of string
+  | ContentEncoding of string
+  | ContentLanguage of string
+  | ContentLength of string
+  | ContentLocation of string
+  | ContentMD5 of string
+  | ContentRange of string
+  | ContentType of string
+  | Expires of string
+  | LastModified of string
+
+type header =
+  | GeneralHeader of general_header
+  | RequestHeader of request_header
+  | EntityHeader of entity_header
 
 type request_line = {
   http_method : http_method;
@@ -34,6 +85,8 @@ let error_to_string err =
   | Malformed_request_line -> "Malformed_request_line"
   | Unknown_method -> "Unknown_method"
   | Malformed_request -> "Malformed_request"
+  | Unknown_header -> "Unknown_header"
+  | Malformed_header -> "Malformed_header"
 
 let http_method_to_string http_method =
   match http_method with
@@ -45,6 +98,72 @@ let http_method_to_string http_method =
   | DELETE -> "DELETE"
   | TRACE -> "TRACE"
   | CONNECT -> "CONNECT"
+
+let header_to_string header =
+  match header with
+  | GeneralHeader h -> (
+      match h with
+      | CacheControl v ->
+          Printf.sprintf "General Header: Cache-Control: \"%s\"" v
+      | Connection v -> Printf.sprintf "General Header: Connection: \"%s\"" v
+      | Date v -> Printf.sprintf "General Header: Date: \"%s\"" v
+      | Pragma v -> Printf.sprintf "General Header: Pragma: \"%s\"" v
+      | Trailer v -> Printf.sprintf "General Header: Trailer: \"%s\"" v
+      | TransferEncoding v ->
+          Printf.sprintf "General Header: Transfer-Encoding: \"%s\"" v
+      | Upgrade v -> Printf.sprintf "General Header: Upgrade: \"%s\"" v
+      | Via v -> Printf.sprintf "General Header: Via: \"%s\"" v
+      | Warning v -> Printf.sprintf "General Header: Warning: \"%s\"" v)
+  | RequestHeader h -> (
+      match h with
+      | Accept v -> Printf.sprintf "Request Header: Accept: \"%s\"" v
+      | AcceptCharset v ->
+          Printf.sprintf "Request Header: Accept-Charset: \"%s\"" v
+      | AcceptEncoding v ->
+          Printf.sprintf "Request Header: Accept-Encoding: \"%s\"" v
+      | AcceptLanguage v ->
+          Printf.sprintf "Request Header: Accept-Language: \"%s\"" v
+      | Authorization v ->
+          Printf.sprintf "Request Header: Authorization: \"%s\"" v
+      | Expect v -> Printf.sprintf "Request Header: Expect: \"%s\"" v
+      | From v -> Printf.sprintf "Request Header: From: \"%s\"" v
+      | Host v -> Printf.sprintf "Request Header: Host: \"%s\"" v
+      | IfMatch v -> Printf.sprintf "Request Header: If-Match: \"%s\"" v
+      | IfModifiedSince v ->
+          Printf.sprintf "Request Header: If-Modified-Since: \"%s\"" v
+      | IfNoneMatch v ->
+          Printf.sprintf "Request Header: If-None-Match: \"%s\"" v
+      | IfRange v -> Printf.sprintf "Request Header: If-Range: \"%s\"" v
+      | IfUnmodifiedSince v ->
+          Printf.sprintf "Request Header: If-Unmodified-Since: \"%s\"" v
+      | MaxForwards v -> Printf.sprintf "Request Header: Max-Forwards: \"%s\"" v
+      | ProxyAuthorization v ->
+          Printf.sprintf "Request Header: Proxy-Authorization: \"%s\"" v
+      | Range v -> Printf.sprintf "Request Header: Range: \"%s\"" v
+      | Referer v -> Printf.sprintf "Request Header: Referer: \"%s\"" v
+      | TE v -> Printf.sprintf "Request Header: TE: \"%s\"" v
+      | UserAgent v -> Printf.sprintf "Request Header: User-Agent: \"%s\"" v)
+  | EntityHeader h -> (
+      match h with
+      | Allow v -> Printf.sprintf "Entity Header: Allow: \"%s\"" v
+      | ContentEncoding v ->
+          Printf.sprintf "Entity Header: Content-Encoding: \"%s\"" v
+      | ContentLanguage v ->
+          Printf.sprintf "Entity Header: Content-Language: \"%s\"" v
+      | ContentLength v ->
+          Printf.sprintf "Entity Header: Content-Length: \"%s\"" v
+      | ContentLocation v ->
+          Printf.sprintf "Entity Header: Content-Location: \"%s\"" v
+      | ContentMD5 v -> Printf.sprintf "Entity Header: Content-MD5: \"%s\"" v
+      | ContentRange v ->
+          Printf.sprintf "Entity Header: Content-Range: \"%s\"" v
+      | ContentType v -> Printf.sprintf "Entity Header: Content-Type: \"%s\"" v
+      | Expires v -> Printf.sprintf "Entity Header: Expires: \"%s\"" v
+      | LastModified v ->
+          Printf.sprintf "Entity Header: Last-Modified: \"%s\"" v)
+
+(* let headers_to_string (headers : header list) : string = *)
+(*   String.concat "\n" (List.map header_to_string headers) *)
 
 let request_line_to_string request_line =
   Printf.sprintf "HTTP Method: %s \nRequest URI: %s \nHTTP Version: %s \n"
@@ -74,6 +193,55 @@ let parse_http_method http_method =
   | "TRACE" -> Ok TRACE
   | "CONNECT" -> Ok CONNECT
   | _ -> Error Unknown_method
+
+let parse_header header =
+  let header_parts = String.split_on_char ':' header in
+  match header_parts with
+  | [ header_name; header_value ] -> (
+      match header_name with
+      | "Cache-Control" -> Ok (GeneralHeader (CacheControl header_value))
+      | "Connection" -> Ok (GeneralHeader (Connection header_value))
+      | "Date" -> Ok (GeneralHeader (Date header_value))
+      | "Pragma" -> Ok (GeneralHeader (Pragma header_value))
+      | "Trailer" -> Ok (GeneralHeader (Trailer header_value))
+      | "Transfer-Encoding" ->
+          Ok (GeneralHeader (TransferEncoding header_value))
+      | "Upgrade" -> Ok (GeneralHeader (Upgrade header_value))
+      | "Via" -> Ok (GeneralHeader (Via header_value))
+      | "Warning" -> Ok (GeneralHeader (Warning header_value))
+      | "Accept" -> Ok (RequestHeader (Accept header_value))
+      | "Accept-Charset" -> Ok (RequestHeader (AcceptCharset header_value))
+      | "Accept-Encoding" -> Ok (RequestHeader (AcceptEncoding header_value))
+      | "Accept-Language" -> Ok (RequestHeader (AcceptLanguage header_value))
+      | "Authorization" -> Ok (RequestHeader (Authorization header_value))
+      | "Expect" -> Ok (RequestHeader (Expect header_value))
+      | "From" -> Ok (RequestHeader (From header_value))
+      | "Host" -> Ok (RequestHeader (Host header_value))
+      | "If-Match" -> Ok (RequestHeader (IfMatch header_value))
+      | "If-ModifiedSince" -> Ok (RequestHeader (IfModifiedSince header_value))
+      | "If-NoneMatch" -> Ok (RequestHeader (IfNoneMatch header_value))
+      | "If-Range" -> Ok (RequestHeader (IfRange header_value))
+      | "If-UnmodifiedSince" ->
+          Ok (RequestHeader (IfUnmodifiedSince header_value))
+      | "Max-Forwards" -> Ok (RequestHeader (MaxForwards header_value))
+      | "Proxy-Authorization" ->
+          Ok (RequestHeader (ProxyAuthorization header_value))
+      | "Range" -> Ok (RequestHeader (Range header_value))
+      | "Referer" -> Ok (RequestHeader (Referer header_value))
+      | "TE" -> Ok (RequestHeader (TE header_value))
+      | "User-Agent" -> Ok (RequestHeader (UserAgent header_value))
+      | "Allow" -> Ok (EntityHeader (Allow header_value))
+      | "Content-Encoding" -> Ok (EntityHeader (ContentEncoding header_value))
+      | "Content-Language" -> Ok (EntityHeader (ContentLanguage header_value))
+      | "Content-Length" -> Ok (EntityHeader (ContentLength header_value))
+      | "Content-Location" -> Ok (EntityHeader (ContentLocation header_value))
+      | "Content-MD5" -> Ok (EntityHeader (ContentMD5 header_value))
+      | "Content-Range" -> Ok (EntityHeader (ContentRange header_value))
+      | "Content-Type" -> Ok (EntityHeader (ContentType header_value))
+      | "Expires" -> Ok (EntityHeader (Expires header_value))
+      | "Last-Modified" -> Ok (EntityHeader (LastModified header_value))
+      | _ -> Error Unknown_header)
+  | _ -> Error Malformed_header
 
 let http_version = "HTTP/1.1"
 
