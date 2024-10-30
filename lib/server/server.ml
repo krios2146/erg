@@ -118,12 +118,41 @@ let parse_request_line req_line =
       | Error e -> Error e)
   | _ -> Error Malformed_request_line
 
+let first_index_of sub s =
+  let sub_len = String.length sub in
+  let s_len = String.length s in
+  let rec aux i =
+    if s_len < i + sub_len then None
+    else if String.sub s i sub_len = sub then Some i
+    else aux (i + 1)
+  in
+  aux 0
+
+let split_on_first sub s =
+  let sub_len = String.length sub in
+  let s_len = String.length s in
+  if s_len < sub_len then None
+  else
+    let sub_index = first_index_of sub s in
+    match sub_index with
+    | None -> None
+    | Some i ->
+        let left = String.sub s 0 i in
+        let right_start_index = i + sub_len in
+        let right_len = s_len - right_start_index in
+        let right = String.sub s right_start_index right_len in
+        Some (left, right)
+
+let parse_http_request data =
+  match split_on_first crlf data with
+  | None -> Error Malformed_request
+  | Some (l, r) -> Ok [ l; r ]
+
 let handle_tcp_client_data data =
   Log.debug (fun m -> m "Recieved data:\n%s" data);
-  let crlf_delimiter = Str.regexp crlf in
-  let request_lines = Str.split crlf_delimiter data in
+  let request_lines = parse_http_request data in
   match request_lines with
-  | hd :: tl -> (
+  | Ok (hd :: tl) -> (
       let request_line = parse_request_line hd in
       match request_line with
       | Ok rl -> Ok { request_line = rl; headers = tl; message_body = "" }
