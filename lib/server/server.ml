@@ -74,7 +74,7 @@ type request_line = {
 
 type http_request = {
   request_line : request_line;
-  headers : string list;
+  headers : header list;
   message_body : string;
 }
 
@@ -162,19 +162,13 @@ let header_to_string header =
       | LastModified v ->
           Printf.sprintf "Entity Header: Last-Modified: \"%s\"" v)
 
-(* let headers_to_string (headers : header list) : string = *)
-(*   String.concat "\n" (List.map header_to_string headers) *)
+let headers_to_string (headers : header list) : string =
+  String.concat "\n" (List.map header_to_string headers)
 
 let request_line_to_string request_line =
   Printf.sprintf "HTTP Method: %s \nRequest URI: %s \nHTTP Version: %s \n"
     (http_method_to_string request_line.http_method)
     request_line.request_uri request_line.http_version
-
-let headers_to_string headers =
-  let rec aux headers acc =
-    match headers with hd :: tl -> aux tl (acc ^ hd ^ "\n") | [] -> acc
-  in
-  aux headers ""
 
 let http_request_to_string http_request =
   Printf.sprintf "Request Line:\n%s\nHeaders:\n%s\nMessage:\n%s\n"
@@ -242,6 +236,10 @@ let parse_header header =
       | "Last-Modified" -> Ok (EntityHeader (LastModified header_value))
       | _ -> Error Unknown_header)
   | _ -> Error Malformed_header
+
+let parse_headers headers =
+  List.map parse_header headers
+  |> List.filter Result.is_ok |> List.map Result.get_ok
 
 let http_version = "HTTP/1.1"
 
@@ -312,20 +310,27 @@ let split_on_first sub s =
         Some (left, right)
 
 let parse_http_request data =
+  let rec aux data acc =
+    match split_on_first crlf data with
+    | None -> Error Malformed_request
+    | Some (l, r) ->
+        if String.length l = 0 then Ok (List.rev acc, r) else aux r (l :: acc)
+  in
   match split_on_first crlf data with
   | None -> Error Malformed_request
-  | Some (l, r) -> Ok [ l; r ]
+  | Some (l, r) -> (
+      let request_line = parse_request_line l in
+      let headers_and_body = aux r [] in
+      match (request_line, headers_and_body) with
+      | Error e, _ -> Error e
+      | _, Error e -> Error e
+      | Ok request_line, Ok (headers, body) ->
+          let headers = parse_headers headers in
+          Ok { request_line; headers; message_body = body })
 
 let handle_tcp_client_data data =
   Log.debug (fun m -> m "Recieved data:\n%s" data);
-  let request_lines = parse_http_request data in
-  match request_lines with
-  | Ok (hd :: tl) -> (
-      let request_line = parse_request_line hd in
-      match request_line with
-      | Ok rl -> Ok { request_line = rl; headers = tl; message_body = "" }
-      | Error e -> Error e)
-  | _ -> Error Malformed_request
+  parse_http_request data
 
 let write_http_response socket data =
   let status_line = http_version ^ " 501 Not Implemented " ^ crlf in
