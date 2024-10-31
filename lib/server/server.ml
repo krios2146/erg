@@ -1,11 +1,9 @@
 type error =
-  | Empty_request_line
-  | Incomplete_request_line
-  | Malformed_request_line
-  | Unknown_method
   | Malformed_request
-  | Unknown_header
+  | Malformed_request_line
   | Malformed_header
+  | Unknown_method
+  | Unknown_header
 
 type http_method =
   | OPTIONS
@@ -80,13 +78,11 @@ type http_request = {
 
 let error_to_string err =
   match err with
-  | Empty_request_line -> "Empty_request_line"
-  | Incomplete_request_line -> "Incomplete_request_line"
-  | Malformed_request_line -> "Malformed_request_line"
-  | Unknown_method -> "Unknown_method"
   | Malformed_request -> "Malformed_request"
-  | Unknown_header -> "Unknown_header"
+  | Malformed_request_line -> "Malformed_request_line"
   | Malformed_header -> "Malformed_header"
+  | Unknown_method -> "Unknown_method"
+  | Unknown_header -> "Unknown_header"
 
 let http_method_to_string http_method =
   match http_method with
@@ -192,6 +188,7 @@ let parse_header header =
   let header_parts = String.split_on_char ':' header in
   match header_parts with
   | [ header_name; header_value ] -> (
+      let header_value = String.trim header_value in
       match String.lowercase_ascii header_name with
       | "cache-control" -> Ok (GeneralHeader (CacheControl header_value))
       | "connection" -> Ok (GeneralHeader (Connection header_value))
@@ -274,8 +271,8 @@ let create_server_socket port =
 let parse_request_line req_line =
   let req_line_parts = String.split_on_char sp req_line in
   match req_line_parts with
-  | [] -> Error Empty_request_line
-  | [ _; _ ] -> Error Incomplete_request_line
+  | [] -> Error Malformed_request_line
+  | [ _; _ ] -> Error Malformed_request_line
   | [ http_method; uri; version ] -> (
       let http_method = parse_http_method http_method in
       match http_method with
