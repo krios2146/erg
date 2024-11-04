@@ -18,6 +18,6 @@
 (package
  (name erg)
  (synopsis "Low level HTTP/1.1 server implementation library")
- (depends ocaml dune oUnit))
+ (depends ocaml dune (oUnit :with-test) (ocamlformat :dev)))
 
 ; See the complete stanza docs at https://dune.readthedocs.io/en/stable/reference/dune-project/index.html

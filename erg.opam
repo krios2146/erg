@@ -10,7 +10,8 @@ bug-reports: "https://github.com/krios2146/erg/issues"
 depends: [
   "ocaml"
   "dune" {>= "3.16"}
-  "oUnit"
+  "oUnit" {with-test}
+  "ocamlformat" {dev}
   "odoc" {with-doc}
 ]
 build: [
