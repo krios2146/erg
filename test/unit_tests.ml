@@ -66,7 +66,7 @@ let parse_http_request_test_valid_request test_ctxt =
       {
         request_line =
           {
-            http_method = POST;
+            http_method = Post;
             request_uri = "/currencies";
             http_version = "HTTP/1.1";
           };
@@ -88,7 +88,7 @@ let parse_http_request_test_valid_request test_ctxt =
   assert_equal ~ctxt:test_ctxt
     ~printer:(fun r ->
       match r with
-      | Error e -> error_to_string e
+      | Error e -> http_error_to_string e
       | Ok r -> http_request_to_string r)
     expected result
 
@@ -103,7 +103,7 @@ let parse_http_request_test_no_headers test_ctxt =
       {
         request_line =
           {
-            http_method = POST;
+            http_method = Post;
             request_uri = "/currencies";
             http_version = "HTTP/1.1";
           };
@@ -117,7 +117,7 @@ let parse_http_request_test_no_headers test_ctxt =
   assert_equal ~ctxt:test_ctxt
     ~printer:(fun r ->
       match r with
-      | Error e -> error_to_string e
+      | Error e -> http_error_to_string e
       | Ok r -> http_request_to_string r)
     expected result
 
@@ -143,7 +143,7 @@ let parse_http_request_test_missing_request_line test_ctxt =
   assert_equal ~ctxt:test_ctxt
     ~printer:(fun r ->
       match r with
-      | Error e -> error_to_string e
+      | Error e -> http_error_to_string e
       | Ok r -> http_request_to_string r)
     expected result
 

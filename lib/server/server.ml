@@ -1,19 +1,21 @@
-type error =
+type http_error =
   | Malformed_request
   | Malformed_request_line
   | Malformed_header
   | Unknown_method
   | Unknown_header
 
+type server_error = Tcp_address_in_use | Tcp_socket_error | Non_tcp_client
+
 type http_method =
-  | OPTIONS
-  | GET
-  | HEAD
-  | POST
-  | PUT
-  | DELETE
-  | TRACE
-  | CONNECT
+  | Options
+  | Get
+  | Head
+  | Post
+  | Put
+  | Delete
+  | Trace
+  | Connect
 
 type general_header =
   | CacheControl of string
@@ -76,7 +78,7 @@ type http_request = {
   message_body : string;
 }
 
-let error_to_string err =
+let http_error_to_string err =
   match err with
   | Malformed_request -> "Malformed_request"
   | Malformed_request_line -> "Malformed_request_line"
@@ -84,16 +86,22 @@ let error_to_string err =
   | Unknown_method -> "Unknown_method"
   | Unknown_header -> "Unknown_header"
 
+let server_error_to_string err =
+  match err with
+  | Tcp_socket_error -> "Tcp_socket_error"
+  | Tcp_address_in_use -> "Tcp_address_in_use"
+  | Non_tcp_client -> "Non_tcp_client"
+
 let http_method_to_string http_method =
   match http_method with
-  | OPTIONS -> "OPTIONS"
-  | GET -> "GET"
-  | HEAD -> "HEAD"
-  | POST -> "POST"
-  | PUT -> "PUT"
-  | DELETE -> "DELETE"
-  | TRACE -> "TRACE"
-  | CONNECT -> "CONNECT"
+  | Options -> "OPTIONS"
+  | Get -> "GET"
+  | Head -> "HEAD"
+  | Post -> "POST"
+  | Put -> "PUT"
+  | Delete -> "DELETE"
+  | Trace -> "TRACE"
+  | Connect -> "CONNECT"
 
 let header_to_string header =
   match header with
@@ -174,14 +182,14 @@ let http_request_to_string http_request =
 
 let parse_http_method http_method =
   match http_method with
-  | "OPTIONS" -> Ok OPTIONS
-  | "GET" -> Ok GET
-  | "HEAD" -> Ok HEAD
-  | "POST" -> Ok POST
-  | "PUT" -> Ok PUT
-  | "DELETE" -> Ok DELETE
-  | "TRACE" -> Ok TRACE
-  | "CONNECT" -> Ok CONNECT
+  | "OPTIONS" -> Ok Options
+  | "GET" -> Ok Get
+  | "HEAD" -> Ok Head
+  | "POST" -> Ok Post
+  | "PUT" -> Ok Put
+  | "DELETE" -> Ok Delete
+  | "TRACE" -> Ok Trace
+  | "CONNECT" -> Ok Connect
   | _ -> Error Unknown_method
 
 let parse_header header =
@@ -240,33 +248,13 @@ let parse_headers headers =
 
 let http_version = "HTTP/1.1"
 
+(* WARN: unused still *)
 (* let cr = '\r' *)
 (* let lf = '\n' *)
 (* let ht = '\t' *)
+
 let sp = ' '
 let crlf = "\r\n"
-let accepting_connections = ref true
-
-let create_server_socket port =
-  try
-    let module U = Unix in
-    let socket_address = U.ADDR_INET (U.inet_addr_loopback, port) in
-    let socket = U.socket U.PF_INET U.SOCK_STREAM 0 in
-
-    U.setsockopt socket U.SO_REUSEADDR true;
-    U.bind socket socket_address;
-    U.listen socket 5;
-
-    Some socket
-  with
-  | Unix.Unix_error (Unix.EADDRINUSE, _, _) ->
-      Log.error (fun m ->
-          m "Unable to bind TCP socket, port %d already in use" port);
-      None
-  | _ ->
-      Log.error (fun m ->
-          m "Unknown error occured while creating server socket on port %d" port);
-      None
 
 let parse_request_line req_line =
   let req_line_parts = String.split_on_char sp req_line in
@@ -325,10 +313,6 @@ let parse_http_request data =
           let headers = parse_headers headers in
           Ok { request_line; headers; message_body = body })
 
-let handle_tcp_client_data data =
-  Log.debug (fun m -> m "Recieved data:\n%s" data);
-  parse_http_request data
-
 let write_http_response socket data =
   let status_line = http_version ^ " 501 Not Implemented " ^ crlf in
   let entity = data in
@@ -336,6 +320,10 @@ let write_http_response socket data =
   let response_bytes = Bytes.of_string response in
   let response_length = Bytes.length response_bytes in
   ignore (Unix.write socket response_bytes 0 response_length)
+
+let handle_tcp_client_data data =
+  Log.debug (fun m -> m "Recieved data:\n%s" data);
+  parse_http_request data
 
 let handle_client socket =
   let buffer = Bytes.create 1024 in
@@ -345,10 +333,29 @@ let handle_client socket =
      let data = Bytes.sub_string buffer 0 received_bytes in
      let handeled_data = handle_tcp_client_data data in
      match handeled_data with
-     | Error e -> write_http_response socket (error_to_string e)
+     | Error e -> write_http_response socket (http_error_to_string e)
      | Ok data -> write_http_response socket (http_request_to_string data));
   Unix.close socket
 
+let accepting_connections = ref true
+
+let create_server_socket port =
+  let module U = Unix in
+  try
+    let socket_address = U.ADDR_INET (U.inet_addr_loopback, port) in
+    let socket = U.socket U.PF_INET U.SOCK_STREAM 0 in
+
+    U.setsockopt socket U.SO_REUSEADDR true;
+    U.bind socket socket_address;
+    U.listen socket 5;
+
+    Ok socket
+  with
+  | U.Unix_error (U.EADDRINUSE, _, _) -> Error Tcp_address_in_use
+  | _ -> Error Tcp_socket_error
+
+(* TODO: Run in parallel, so server could serve multiple clients at the same time *)
+(* TODO: Persistent TCP connections *)
 let accept_connection server_socket =
   Log.debug (fun m -> m "Accepting connections");
 
@@ -358,27 +365,38 @@ let accept_connection server_socket =
 
     let client_inet_address =
       match client_address with
-      | Unix.ADDR_INET (address, _) -> address
-      | _ -> Unix.inet_addr_any
+      | Unix.ADDR_INET (address, _) -> Ok address
+      | _ -> Error Non_tcp_client
     in
-    let client_inet_address_str =
-      Unix.string_of_inet_addr client_inet_address
+    let client_inet_address =
+      Result.map Unix.string_of_inet_addr client_inet_address
     in
-    Log.debug (fun m ->
-        m "Recieved client connection, address: %s" client_inet_address_str);
+    if Result.is_ok client_inet_address then (
+      Log.debug (fun m ->
+          m "Recieved client connection, address: %s"
+            (Result.get_ok client_inet_address));
 
-    (* TODO: Run in parallel, so server could serve multiple clients at the same time *)
-    handle_client client_socket
+      handle_client client_socket)
+    else
+      Log.error (fun m ->
+          m "Failed to accept client connection %s"
+            (server_error_to_string (Result.get_error client_inet_address)))
   done;
 
+  Log.info (fun m -> m "Accepting connections");
   Unix.close server_socket
 
 let run_server port =
   let server_socket = create_server_socket port in
   match server_socket with
-  | Some socket ->
+  | Ok socket ->
       Log.info (fun m -> m "Server listening on port %d" port);
       accept_connection socket
-  | None -> ()
+  | Error Tcp_address_in_use ->
+      Log.error (fun m ->
+          m "Unable to bind TCP socket, port %d already in use" port)
+  | Error _ ->
+      Log.error (fun m ->
+          m "Unknown error occured while creating server socket on port %d" port)
 
 let stop_server () = accepting_connections := false
