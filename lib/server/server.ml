@@ -333,12 +333,8 @@ let rec read_data socket acc =
   let buffer = Bytes.create 1024 in
   let received_bytes =
     try Unix.read socket buffer 0 (Bytes.length buffer) with
-    | Unix.Unix_error (Unix.EAGAIN, _, _) ->
-        Log.info (fun m -> m "EAGAIN was thrown, stop reading bytes");
-        0
-    | Unix.Unix_error (Unix.EWOULDBLOCK, _, _) ->
-        Log.info (fun m -> m "EWOULDBLOCK was thrown, stop reading bytes");
-        0
+    | Unix.Unix_error (Unix.EAGAIN, _, _) -> 0
+    | Unix.Unix_error (Unix.EWOULDBLOCK, _, _) -> 0
     | e ->
         Log.error (fun m ->
             let e = Printexc.to_string e in
