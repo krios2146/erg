@@ -329,28 +329,31 @@ let handle_tcp_client_data data =
   Log.debug (fun m -> m "Recieved data:\n%s" data);
   parse_http_request data
 
-let rec read_data socket acc =
-  let buffer = Bytes.create 1024 in
-  let received_bytes =
-    try Unix.read socket buffer 0 (Bytes.length buffer) with
-    | Unix.Unix_error (Unix.EAGAIN, _, _) -> 0
-    | Unix.Unix_error (Unix.EWOULDBLOCK, _, _) -> 0
-    | e ->
-        Log.error (fun m ->
-            let e = Printexc.to_string e in
-            m "Error reading bytes from the TCP socket: %s" e);
-        0
+let read_data socket =
+  let rec aux acc =
+    let buffer = Bytes.create 1024 in
+    let received_bytes =
+      try Unix.read socket buffer 0 (Bytes.length buffer) with
+      | Unix.Unix_error (Unix.EAGAIN, _, _) -> 0
+      | Unix.Unix_error (Unix.EWOULDBLOCK, _, _) -> 0
+      | e ->
+          Log.error (fun m ->
+              let e = Printexc.to_string e in
+              m "Error reading bytes from the TCP socket: %s" e);
+          0
+    in
+    if received_bytes = 0 then if Bytes.length acc > 0 then Some acc else None
+    else
+      (* Create empty buffer *)
+      let updated_data = Bytes.create (Bytes.length acc + received_bytes) in
+      (* Copy bytes from previous buffer *)
+      Bytes.blit acc 0 updated_data 0 (Bytes.length acc);
+      (* Copy received bytes *)
+      Bytes.blit buffer 0 updated_data (Bytes.length acc) received_bytes;
+      (* Read from tcp again *)
+      aux updated_data
   in
-  if received_bytes = 0 then if Bytes.length acc > 0 then Some acc else None
-  else
-    (* Create empty buffer *)
-    let updated_data = Bytes.create (Bytes.length acc + received_bytes) in
-    (* Copy bytes from previous buffer *)
-    Bytes.blit acc 0 updated_data 0 (Bytes.length acc);
-    (* Copy received bytes *)
-    Bytes.blit buffer 0 updated_data (Bytes.length acc) received_bytes;
-    (* Read from tcp again *)
-    read_data socket updated_data
+  aux Bytes.empty
 
 let rec handle_client socket =
   let write_response r =
@@ -358,10 +361,11 @@ let rec handle_client socket =
     | Error e -> write_http_response socket (http_error_to_string e)
     | Ok r -> write_http_response socket (http_request_to_string r)
   in
-  let bytes = read_data socket (Bytes.create 0) in
-  let data = Option.map String.of_bytes bytes in
-  let response = Option.map handle_tcp_client_data data in
-  Option.iter write_response response;
+
+  read_data socket |> Option.map String.of_bytes
+  |> Option.map handle_tcp_client_data
+  |> Option.iter write_response;
+
   handle_client socket
 
 let accepting_connections = ref true
