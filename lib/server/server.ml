@@ -314,28 +314,57 @@ let parse_http_request data =
           Ok { request_line; headers; message_body = body })
 
 let write_http_response socket data =
+  let socket_out_channel = Unix.out_channel_of_descr socket in
   let status_line = http_version ^ " 501 Not Implemented " ^ crlf in
+  let headers = "Connection: keep-alive" ^ crlf in
+  let headers =
+    headers ^ "Content-Length: " ^ (String.length data |> string_of_int) ^ crlf
+  in
   let entity = data in
-  let response = status_line ^ crlf ^ entity in
-  let response_bytes = Bytes.of_string response in
-  let response_length = Bytes.length response_bytes in
-  ignore (Unix.write socket response_bytes 0 response_length)
+  let response = status_line ^ headers ^ crlf ^ entity in
+  output_string socket_out_channel response;
+  flush socket_out_channel
 
 let handle_tcp_client_data data =
   Log.debug (fun m -> m "Recieved data:\n%s" data);
   parse_http_request data
 
-let handle_client socket =
+let rec read_data socket acc =
   let buffer = Bytes.create 1024 in
-  let received_bytes = Unix.read socket buffer 0 1024 in
+  let received_bytes =
+    try Unix.read socket buffer 0 (Bytes.length buffer) with
+    | Unix.Unix_error (Unix.EAGAIN, _, _) ->
+        Log.info (fun m -> m "EAGAIN was thrown, stop reading bytes");
+        0
+    | Unix.Unix_error (Unix.EWOULDBLOCK, _, _) ->
+        Log.info (fun m -> m "EWOULDBLOCK was thrown, stop reading bytes");
+        0
+    | e ->
+        Log.error (fun m ->
+            let e = Printexc.to_string e in
+            m "Error reading bytes from the TCP socket: %s" e);
+        0
+  in
+  if received_bytes = 0 then acc
+  else
+    (* Create empty buffer *)
+    let updated_data = Bytes.create (Bytes.length acc + received_bytes) in
+    (* Copy bytes from previous buffer *)
+    Bytes.blit acc 0 updated_data 0 (Bytes.length acc);
+    (* Copy received bytes *)
+    Bytes.blit buffer 0 updated_data (Bytes.length acc) received_bytes;
+    (* Read from tcp again *)
+    read_data socket updated_data
 
-  (if received_bytes > 0 then
-     let data = Bytes.sub_string buffer 0 received_bytes in
-     let handeled_data = handle_tcp_client_data data in
-     match handeled_data with
-     | Error e -> write_http_response socket (http_error_to_string e)
-     | Ok data -> write_http_response socket (http_request_to_string data));
-  Unix.close socket
+(* TODO: This should read data -> handle it -> write response (in infinite loop) *)
+let handle_client socket =
+  Unix.set_nonblock socket;
+  let data = read_data socket (Bytes.create 0) in
+  let handeled_data = handle_tcp_client_data (String.of_bytes data) in
+  (match handeled_data with
+  | Error e -> write_http_response socket (http_error_to_string e)
+  | Ok data -> write_http_response socket (http_request_to_string data));
+  ignore (Unix.close socket)
 
 let accepting_connections = ref true
 
@@ -354,10 +383,8 @@ let create_server_socket port =
   | U.Unix_error (U.EADDRINUSE, _, _) -> Error Tcp_address_in_use
   | _ -> Error Tcp_socket_error
 
-(* TODO: Run in parallel, so server could serve multiple clients at the same time *)
-(* TODO: Persistent TCP connections *)
-let accept_connection server_socket =
-  Log.debug (fun m -> m "Accepting connections");
+let accept_connections server_socket =
+  Log.info (fun m -> m "Accepting connections");
 
   (* Not sure whether doing it recursively is a good idea, so there is a loop *)
   while !accepting_connections do
@@ -365,25 +392,23 @@ let accept_connection server_socket =
 
     let client_inet_address =
       match client_address with
-      | Unix.ADDR_INET (address, _) -> Ok address
+      | Unix.ADDR_INET (addr, port) -> Ok (addr, port)
       | _ -> Error Non_tcp_client
-    in
-    let client_inet_address =
-      Result.map Unix.string_of_inet_addr client_inet_address
     in
     if Result.is_ok client_inet_address then (
       Log.debug (fun m ->
-          m "Recieved client connection, address: %s"
-            (Result.get_ok client_inet_address));
+          let addr, port = Result.get_ok client_inet_address in
+          let addr = Unix.string_of_inet_addr addr in
+          m "Recieved client connection, address: %s:%d" addr port);
 
-      handle_client client_socket)
+      (* TODO: Thread should be saved and closed after the server shutdown *)
+      ignore (Thread.create handle_client client_socket))
     else
       Log.error (fun m ->
           m "Failed to accept client connection %s"
             (server_error_to_string (Result.get_error client_inet_address)))
   done;
 
-  Log.info (fun m -> m "Accepting connections");
   Unix.close server_socket
 
 let run_server port =
@@ -391,7 +416,7 @@ let run_server port =
   match server_socket with
   | Ok socket ->
       Log.info (fun m -> m "Server listening on port %d" port);
-      accept_connection socket
+      accept_connections socket
   | Error Tcp_address_in_use ->
       Log.error (fun m ->
           m "Unable to bind TCP socket, port %d already in use" port)
