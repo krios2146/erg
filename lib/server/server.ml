@@ -341,7 +341,7 @@ let rec read_data socket acc =
             m "Error reading bytes from the TCP socket: %s" e);
         0
   in
-  if received_bytes = 0 then acc
+  if received_bytes = 0 then if Bytes.length acc > 0 then Some acc else None
   else
     (* Create empty buffer *)
     let updated_data = Bytes.create (Bytes.length acc + received_bytes) in
@@ -352,15 +352,17 @@ let rec read_data socket acc =
     (* Read from tcp again *)
     read_data socket updated_data
 
-(* TODO: This should read data -> handle it -> write response (in infinite loop) *)
-let handle_client socket =
-  Unix.set_nonblock socket;
-  let data = read_data socket (Bytes.create 0) in
-  let handeled_data = handle_tcp_client_data (String.of_bytes data) in
-  (match handeled_data with
-  | Error e -> write_http_response socket (http_error_to_string e)
-  | Ok data -> write_http_response socket (http_request_to_string data));
-  ignore (Unix.close socket)
+let rec handle_client socket =
+  let write_response r =
+    match r with
+    | Error e -> write_http_response socket (http_error_to_string e)
+    | Ok r -> write_http_response socket (http_request_to_string r)
+  in
+  let bytes = read_data socket (Bytes.create 0) in
+  let data = Option.map String.of_bytes bytes in
+  let response = Option.map handle_tcp_client_data data in
+  Option.iter write_response response;
+  handle_client socket
 
 let accepting_connections = ref true
 
@@ -379,40 +381,36 @@ let create_server_socket port =
   | U.Unix_error (U.EADDRINUSE, _, _) -> Error Tcp_address_in_use
   | _ -> Error Tcp_socket_error
 
-let accept_connections server_socket =
-  Log.info (fun m -> m "Accepting connections");
-
-  (* Not sure whether doing it recursively is a good idea, so there is a loop *)
-  while !accepting_connections do
+let rec accept_connections server_socket threads =
+  if not !accepting_connections then (
+    List.iter Thread.join threads;
+    Unix.close server_socket)
+  else
     let client_socket, client_address = Unix.accept server_socket in
-
     let client_inet_address =
       match client_address with
       | Unix.ADDR_INET (addr, port) -> Ok (addr, port)
       | _ -> Error Non_tcp_client
     in
-    if Result.is_ok client_inet_address then (
-      Log.debug (fun m ->
-          let addr, port = Result.get_ok client_inet_address in
-          let addr = Unix.string_of_inet_addr addr in
-          m "Recieved client connection, address: %s:%d" addr port);
-
-      (* TODO: Thread should be saved and closed after the server shutdown *)
-      ignore (Thread.create handle_client client_socket))
-    else
-      Log.error (fun m ->
-          m "Failed to accept client connection %s"
-            (server_error_to_string (Result.get_error client_inet_address)))
-  done;
-
-  Unix.close server_socket
+    match client_inet_address with
+    | Ok (addr, port) ->
+        Log.debug (fun m ->
+            let addr = Unix.string_of_inet_addr addr in
+            m "Recieved client connection, address: %s:%d" addr port);
+        Unix.set_nonblock client_socket;
+        let thread = Thread.create handle_client client_socket in
+        accept_connections server_socket (thread :: threads)
+    | Error e ->
+        Log.warn (fun m ->
+            m "Failed to accept client connection %s" (server_error_to_string e));
+        accept_connections server_socket threads
 
 let run_server port =
   let server_socket = create_server_socket port in
   match server_socket with
   | Ok socket ->
       Log.info (fun m -> m "Server listening on port %d" port);
-      accept_connections socket
+      accept_connections socket []
   | Error Tcp_address_in_use ->
       Log.error (fun m ->
           m "Unable to bind TCP socket, port %d already in use" port)
