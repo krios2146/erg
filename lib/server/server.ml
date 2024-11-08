@@ -1,3 +1,6 @@
+let sp = ' '
+let crlf = "\r\n"
+
 type http_error =
   | Malformed_request
   | Malformed_request_line
@@ -78,6 +81,18 @@ type http_request = {
   message_body : string;
 }
 
+type status_line = {
+  http_version : string;
+  status_code : int;
+  reason_phrase : string;
+}
+
+type http_response = {
+  status_line : status_line;
+  headers : header list;
+  message_body : string;
+}
+
 let http_error_to_string err =
   match err with
   | Malformed_request -> "Malformed_request"
@@ -103,7 +118,7 @@ let http_method_to_string http_method =
   | Trace -> "TRACE"
   | Connect -> "CONNECT"
 
-let header_to_string header =
+let pretty_print_header header =
   match header with
   | GeneralHeader h -> (
       match h with
@@ -166,19 +181,82 @@ let header_to_string header =
       | LastModified v ->
           Printf.sprintf "Entity Header: Last-Modified: \"%s\"" v)
 
-let headers_to_string (headers : header list) : string =
-  String.concat "\n" (List.map header_to_string headers)
+let pretty_print_headers (headers : header list) : string =
+  String.concat "\n" (List.map pretty_print_header headers)
 
-let request_line_to_string request_line =
+let pretty_print_request_line request_line =
   Printf.sprintf "HTTP Method: %s \nRequest URI: %s \nHTTP Version: %s \n"
     (http_method_to_string request_line.http_method)
     request_line.request_uri request_line.http_version
 
-let http_request_to_string http_request =
+let pretty_print_http_request http_request =
   Printf.sprintf "Request Line:\n%s\nHeaders:\n%s\nMessage:\n%s\n"
-    (request_line_to_string http_request.request_line)
-    (headers_to_string http_request.headers)
+    (pretty_print_request_line http_request.request_line)
+    (pretty_print_headers http_request.headers)
     http_request.message_body
+
+let http_header_to_string header =
+  match header with
+  | GeneralHeader h -> (
+      match h with
+      | CacheControl v -> Printf.sprintf "Cache-Control: %s" v
+      | Connection v -> Printf.sprintf "Connection: %s" v
+      | Date v -> Printf.sprintf "Date: %s" v
+      | Pragma v -> Printf.sprintf "Pragma: %s" v
+      | Trailer v -> Printf.sprintf "Trailer: %s" v
+      | TransferEncoding v -> Printf.sprintf "Transfer-Encoding: %s" v
+      | Upgrade v -> Printf.sprintf "Upgrade: %s" v
+      | Via v -> Printf.sprintf "Via: %s" v
+      | Warning v -> Printf.sprintf "Warning: %s" v)
+  | RequestHeader h -> (
+      match h with
+      | Accept v -> Printf.sprintf "Accept: %s" v
+      | AcceptCharset v -> Printf.sprintf "Accept-Charset: %s" v
+      | AcceptEncoding v -> Printf.sprintf "Accept-Encoding: %s" v
+      | AcceptLanguage v -> Printf.sprintf "Accept-Language: %s" v
+      | Authorization v -> Printf.sprintf "Authorization: %s" v
+      | Expect v -> Printf.sprintf "Expect: %s" v
+      | From v -> Printf.sprintf "From: %s" v
+      | Host v -> Printf.sprintf "Host: %s" v
+      | IfMatch v -> Printf.sprintf "If-Match: %s" v
+      | IfModifiedSince v -> Printf.sprintf "If-Modified-Since: %s" v
+      | IfNoneMatch v -> Printf.sprintf "If-None-Match: %s" v
+      | IfRange v -> Printf.sprintf "If-Range: %s" v
+      | IfUnmodifiedSince v -> Printf.sprintf "If-Unmodified-Since: %s" v
+      | MaxForwards v -> Printf.sprintf "Max-Forwards: %s" v
+      | ProxyAuthorization v -> Printf.sprintf "Proxy-Authorization: %s" v
+      | Range v -> Printf.sprintf "Range: %s" v
+      | Referer v -> Printf.sprintf "Referer: %s" v
+      | TE v -> Printf.sprintf "TE: %s" v
+      | UserAgent v -> Printf.sprintf "User-Agent: %s" v)
+  | EntityHeader h -> (
+      match h with
+      | Allow v -> Printf.sprintf "Allow: %s" v
+      | ContentEncoding v -> Printf.sprintf "Content-Encoding: %s" v
+      | ContentLanguage v -> Printf.sprintf "Content-Language: %s" v
+      | ContentLength v -> Printf.sprintf "Content-Length: %s" v
+      | ContentLocation v -> Printf.sprintf "Content-Location: %s" v
+      | ContentMD5 v -> Printf.sprintf "Content-MD5: %s" v
+      | ContentRange v -> Printf.sprintf "Content-Range: %s" v
+      | ContentType v -> Printf.sprintf "Content-Type: %s" v
+      | Expires v -> Printf.sprintf "Expires: %s" v
+      | LastModified v -> Printf.sprintf "Last-Modified: %s" v)
+
+let http_headers_to_string headers =
+  List.map http_header_to_string headers
+  |> List.map (fun h -> h ^ crlf)
+  |> String.concat String.empty
+
+let status_line_to_string sl =
+  let sp = String.make 1 sp in
+  let status_code = sl.status_code |> string_of_int in
+  sl.http_version ^ sp ^ status_code ^ sp ^ sl.reason_phrase ^ crlf
+
+let http_response_to_string res =
+  let status_line = status_line_to_string res.status_line in
+  let headers = http_headers_to_string res.headers in
+  let message = String.trim res.message_body in
+  status_line ^ headers ^ crlf ^ message ^ crlf
 
 let parse_http_method http_method =
   match http_method with
@@ -253,9 +331,6 @@ let http_version = "HTTP/1.1"
 (* let lf = '\n' *)
 (* let ht = '\t' *)
 
-let sp = ' '
-let crlf = "\r\n"
-
 let parse_request_line req_line =
   let req_line_parts = String.split_on_char sp req_line in
   match req_line_parts with
@@ -313,21 +388,33 @@ let parse_http_request data =
           let headers = parse_headers headers in
           Ok { request_line; headers; message_body = body })
 
-let write_http_response socket data =
+let write_http_response socket resp =
   let socket_out_channel = Unix.out_channel_of_descr socket in
-  let status_line = http_version ^ " 501 Not Implemented " ^ crlf in
-  let headers = "Connection: keep-alive" ^ crlf in
-  let headers =
-    headers ^ "Content-Length: " ^ (String.length data |> string_of_int) ^ crlf
+  let response =
+    match resp with
+    | Ok resp -> http_response_to_string resp
+    | Error e -> http_error_to_string e
   in
-  let entity = data in
-  let response = status_line ^ headers ^ crlf ^ entity in
   output_string socket_out_channel response;
   flush socket_out_channel
 
-let handle_tcp_client_data data =
-  Log.debug (fun m -> m "Recieved data:\n%s" data);
-  parse_http_request data
+let process_http_request req =
+  Result.map
+    (fun req ->
+      let body = pretty_print_http_request req in
+      let headers : header list = [] in
+      let headers = GeneralHeader (Connection "keep-alive") :: headers in
+      let headers =
+        EntityHeader (ContentLength (String.length body |> string_of_int))
+        :: headers
+      in
+      {
+        status_line =
+          { http_version; status_code = 501; reason_phrase = "Not Implemented" };
+        headers;
+        message_body = body;
+      })
+    req
 
 let read_data socket =
   let rec aux acc =
@@ -355,16 +442,15 @@ let read_data socket =
   in
   aux Bytes.empty
 
+(* TODO: Don't sure if the Pipelining - 8.1.2.2 is working now *)
+(* TODO: TCP socket close on Connection: close header - 8.1.2.1 *)
+(* TODO: Use of the 100 (Continue) Status - 8.2.3 *)
+(* TODO: Host header handling - 14.23 *)
 let rec handle_client socket =
-  let write_response r =
-    match r with
-    | Error e -> write_http_response socket (http_error_to_string e)
-    | Ok r -> write_http_response socket (http_request_to_string r)
-  in
-
   read_data socket |> Option.map String.of_bytes
-  |> Option.map handle_tcp_client_data
-  |> Option.iter write_response;
+  |> Option.map parse_http_request
+  |> Option.map process_http_request
+  |> Option.iter (write_http_response socket);
 
   handle_client socket
 
@@ -386,6 +472,7 @@ let create_server_socket port =
   | _ -> Error Tcp_socket_error
 
 let rec accept_connections server_socket threads =
+  (* TODO: Timeouts for connections *)
   if not !accepting_connections then (
     List.iter Thread.join threads;
     Unix.close server_socket)

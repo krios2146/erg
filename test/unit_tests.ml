@@ -89,7 +89,7 @@ let parse_http_request_test_valid_request test_ctxt =
     ~printer:(fun r ->
       match r with
       | Error e -> http_error_to_string e
-      | Ok r -> http_request_to_string r)
+      | Ok r -> pretty_print_http_request r)
     expected result
 
 let parse_http_request_test_no_headers test_ctxt =
@@ -118,7 +118,7 @@ let parse_http_request_test_no_headers test_ctxt =
     ~printer:(fun r ->
       match r with
       | Error e -> http_error_to_string e
-      | Ok r -> http_request_to_string r)
+      | Ok r -> pretty_print_http_request r)
     expected result
 
 let parse_http_request_test_missing_request_line test_ctxt =
@@ -144,7 +144,7 @@ let parse_http_request_test_missing_request_line test_ctxt =
     ~printer:(fun r ->
       match r with
       | Error e -> http_error_to_string e
-      | Ok r -> http_request_to_string r)
+      | Ok r -> pretty_print_http_request r)
     expected result
 
 let suite =
