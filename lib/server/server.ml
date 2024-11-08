@@ -20,7 +20,8 @@ type http_method =
   | Trace
   | Connect
 
-type general_header =
+type header =
+  (* General Headers *)
   | CacheControl of string
   | Connection of string
   | Date of string
@@ -30,8 +31,7 @@ type general_header =
   | Upgrade of string
   | Via of string
   | Warning of string
-
-type request_header =
+  (* Request Headers *)
   | Accept of string
   | AcceptCharset of string
   | AcceptEncoding of string
@@ -51,8 +51,7 @@ type request_header =
   | Referer of string
   | TE of string
   | UserAgent of string
-
-type entity_header =
+  (* Entity Headers *)
   | Allow of string
   | ContentEncoding of string
   | ContentLanguage of string
@@ -63,11 +62,6 @@ type entity_header =
   | ContentType of string
   | Expires of string
   | LastModified of string
-
-type header =
-  | GeneralHeader of general_header
-  | RequestHeader of request_header
-  | EntityHeader of entity_header
 
 type request_line = {
   http_method : http_method;
@@ -120,66 +114,53 @@ let http_method_to_string http_method =
 
 let pretty_print_header header =
   match header with
-  | GeneralHeader h -> (
-      match h with
-      | CacheControl v ->
-          Printf.sprintf "General Header: Cache-Control: \"%s\"" v
-      | Connection v -> Printf.sprintf "General Header: Connection: \"%s\"" v
-      | Date v -> Printf.sprintf "General Header: Date: \"%s\"" v
-      | Pragma v -> Printf.sprintf "General Header: Pragma: \"%s\"" v
-      | Trailer v -> Printf.sprintf "General Header: Trailer: \"%s\"" v
-      | TransferEncoding v ->
-          Printf.sprintf "General Header: Transfer-Encoding: \"%s\"" v
-      | Upgrade v -> Printf.sprintf "General Header: Upgrade: \"%s\"" v
-      | Via v -> Printf.sprintf "General Header: Via: \"%s\"" v
-      | Warning v -> Printf.sprintf "General Header: Warning: \"%s\"" v)
-  | RequestHeader h -> (
-      match h with
-      | Accept v -> Printf.sprintf "Request Header: Accept: \"%s\"" v
-      | AcceptCharset v ->
-          Printf.sprintf "Request Header: Accept-Charset: \"%s\"" v
-      | AcceptEncoding v ->
-          Printf.sprintf "Request Header: Accept-Encoding: \"%s\"" v
-      | AcceptLanguage v ->
-          Printf.sprintf "Request Header: Accept-Language: \"%s\"" v
-      | Authorization v ->
-          Printf.sprintf "Request Header: Authorization: \"%s\"" v
-      | Expect v -> Printf.sprintf "Request Header: Expect: \"%s\"" v
-      | From v -> Printf.sprintf "Request Header: From: \"%s\"" v
-      | Host v -> Printf.sprintf "Request Header: Host: \"%s\"" v
-      | IfMatch v -> Printf.sprintf "Request Header: If-Match: \"%s\"" v
-      | IfModifiedSince v ->
-          Printf.sprintf "Request Header: If-Modified-Since: \"%s\"" v
-      | IfNoneMatch v ->
-          Printf.sprintf "Request Header: If-None-Match: \"%s\"" v
-      | IfRange v -> Printf.sprintf "Request Header: If-Range: \"%s\"" v
-      | IfUnmodifiedSince v ->
-          Printf.sprintf "Request Header: If-Unmodified-Since: \"%s\"" v
-      | MaxForwards v -> Printf.sprintf "Request Header: Max-Forwards: \"%s\"" v
-      | ProxyAuthorization v ->
-          Printf.sprintf "Request Header: Proxy-Authorization: \"%s\"" v
-      | Range v -> Printf.sprintf "Request Header: Range: \"%s\"" v
-      | Referer v -> Printf.sprintf "Request Header: Referer: \"%s\"" v
-      | TE v -> Printf.sprintf "Request Header: TE: \"%s\"" v
-      | UserAgent v -> Printf.sprintf "Request Header: User-Agent: \"%s\"" v)
-  | EntityHeader h -> (
-      match h with
-      | Allow v -> Printf.sprintf "Entity Header: Allow: \"%s\"" v
-      | ContentEncoding v ->
-          Printf.sprintf "Entity Header: Content-Encoding: \"%s\"" v
-      | ContentLanguage v ->
-          Printf.sprintf "Entity Header: Content-Language: \"%s\"" v
-      | ContentLength v ->
-          Printf.sprintf "Entity Header: Content-Length: \"%s\"" v
-      | ContentLocation v ->
-          Printf.sprintf "Entity Header: Content-Location: \"%s\"" v
-      | ContentMD5 v -> Printf.sprintf "Entity Header: Content-MD5: \"%s\"" v
-      | ContentRange v ->
-          Printf.sprintf "Entity Header: Content-Range: \"%s\"" v
-      | ContentType v -> Printf.sprintf "Entity Header: Content-Type: \"%s\"" v
-      | Expires v -> Printf.sprintf "Entity Header: Expires: \"%s\"" v
-      | LastModified v ->
-          Printf.sprintf "Entity Header: Last-Modified: \"%s\"" v)
+  | CacheControl v -> Printf.sprintf "General Header: Cache-Control: \"%s\"" v
+  | Connection v -> Printf.sprintf "General Header: Connection: \"%s\"" v
+  | Date v -> Printf.sprintf "General Header: Date: \"%s\"" v
+  | Pragma v -> Printf.sprintf "General Header: Pragma: \"%s\"" v
+  | Trailer v -> Printf.sprintf "General Header: Trailer: \"%s\"" v
+  | TransferEncoding v ->
+      Printf.sprintf "General Header: Transfer-Encoding: \"%s\"" v
+  | Upgrade v -> Printf.sprintf "General Header: Upgrade: \"%s\"" v
+  | Via v -> Printf.sprintf "General Header: Via: \"%s\"" v
+  | Warning v -> Printf.sprintf "General Header: Warning: \"%s\"" v
+  | Accept v -> Printf.sprintf "Request Header: Accept: \"%s\"" v
+  | AcceptCharset v -> Printf.sprintf "Request Header: Accept-Charset: \"%s\"" v
+  | AcceptEncoding v ->
+      Printf.sprintf "Request Header: Accept-Encoding: \"%s\"" v
+  | AcceptLanguage v ->
+      Printf.sprintf "Request Header: Accept-Language: \"%s\"" v
+  | Authorization v -> Printf.sprintf "Request Header: Authorization: \"%s\"" v
+  | Expect v -> Printf.sprintf "Request Header: Expect: \"%s\"" v
+  | From v -> Printf.sprintf "Request Header: From: \"%s\"" v
+  | Host v -> Printf.sprintf "Request Header: Host: \"%s\"" v
+  | IfMatch v -> Printf.sprintf "Request Header: If-Match: \"%s\"" v
+  | IfModifiedSince v ->
+      Printf.sprintf "Request Header: If-Modified-Since: \"%s\"" v
+  | IfNoneMatch v -> Printf.sprintf "Request Header: If-None-Match: \"%s\"" v
+  | IfRange v -> Printf.sprintf "Request Header: If-Range: \"%s\"" v
+  | IfUnmodifiedSince v ->
+      Printf.sprintf "Request Header: If-Unmodified-Since: \"%s\"" v
+  | MaxForwards v -> Printf.sprintf "Request Header: Max-Forwards: \"%s\"" v
+  | ProxyAuthorization v ->
+      Printf.sprintf "Request Header: Proxy-Authorization: \"%s\"" v
+  | Range v -> Printf.sprintf "Request Header: Range: \"%s\"" v
+  | Referer v -> Printf.sprintf "Request Header: Referer: \"%s\"" v
+  | TE v -> Printf.sprintf "Request Header: TE: \"%s\"" v
+  | UserAgent v -> Printf.sprintf "Request Header: User-Agent: \"%s\"" v
+  | Allow v -> Printf.sprintf "Entity Header: Allow: \"%s\"" v
+  | ContentEncoding v ->
+      Printf.sprintf "Entity Header: Content-Encoding: \"%s\"" v
+  | ContentLanguage v ->
+      Printf.sprintf "Entity Header: Content-Language: \"%s\"" v
+  | ContentLength v -> Printf.sprintf "Entity Header: Content-Length: \"%s\"" v
+  | ContentLocation v ->
+      Printf.sprintf "Entity Header: Content-Location: \"%s\"" v
+  | ContentMD5 v -> Printf.sprintf "Entity Header: Content-MD5: \"%s\"" v
+  | ContentRange v -> Printf.sprintf "Entity Header: Content-Range: \"%s\"" v
+  | ContentType v -> Printf.sprintf "Entity Header: Content-Type: \"%s\"" v
+  | Expires v -> Printf.sprintf "Entity Header: Expires: \"%s\"" v
+  | LastModified v -> Printf.sprintf "Entity Header: Last-Modified: \"%s\"" v
 
 let pretty_print_headers (headers : header list) : string =
   String.concat "\n" (List.map pretty_print_header headers)
@@ -197,50 +178,44 @@ let pretty_print_http_request http_request =
 
 let http_header_to_string header =
   match header with
-  | GeneralHeader h -> (
-      match h with
-      | CacheControl v -> Printf.sprintf "Cache-Control: %s" v
-      | Connection v -> Printf.sprintf "Connection: %s" v
-      | Date v -> Printf.sprintf "Date: %s" v
-      | Pragma v -> Printf.sprintf "Pragma: %s" v
-      | Trailer v -> Printf.sprintf "Trailer: %s" v
-      | TransferEncoding v -> Printf.sprintf "Transfer-Encoding: %s" v
-      | Upgrade v -> Printf.sprintf "Upgrade: %s" v
-      | Via v -> Printf.sprintf "Via: %s" v
-      | Warning v -> Printf.sprintf "Warning: %s" v)
-  | RequestHeader h -> (
-      match h with
-      | Accept v -> Printf.sprintf "Accept: %s" v
-      | AcceptCharset v -> Printf.sprintf "Accept-Charset: %s" v
-      | AcceptEncoding v -> Printf.sprintf "Accept-Encoding: %s" v
-      | AcceptLanguage v -> Printf.sprintf "Accept-Language: %s" v
-      | Authorization v -> Printf.sprintf "Authorization: %s" v
-      | Expect v -> Printf.sprintf "Expect: %s" v
-      | From v -> Printf.sprintf "From: %s" v
-      | Host v -> Printf.sprintf "Host: %s" v
-      | IfMatch v -> Printf.sprintf "If-Match: %s" v
-      | IfModifiedSince v -> Printf.sprintf "If-Modified-Since: %s" v
-      | IfNoneMatch v -> Printf.sprintf "If-None-Match: %s" v
-      | IfRange v -> Printf.sprintf "If-Range: %s" v
-      | IfUnmodifiedSince v -> Printf.sprintf "If-Unmodified-Since: %s" v
-      | MaxForwards v -> Printf.sprintf "Max-Forwards: %s" v
-      | ProxyAuthorization v -> Printf.sprintf "Proxy-Authorization: %s" v
-      | Range v -> Printf.sprintf "Range: %s" v
-      | Referer v -> Printf.sprintf "Referer: %s" v
-      | TE v -> Printf.sprintf "TE: %s" v
-      | UserAgent v -> Printf.sprintf "User-Agent: %s" v)
-  | EntityHeader h -> (
-      match h with
-      | Allow v -> Printf.sprintf "Allow: %s" v
-      | ContentEncoding v -> Printf.sprintf "Content-Encoding: %s" v
-      | ContentLanguage v -> Printf.sprintf "Content-Language: %s" v
-      | ContentLength v -> Printf.sprintf "Content-Length: %s" v
-      | ContentLocation v -> Printf.sprintf "Content-Location: %s" v
-      | ContentMD5 v -> Printf.sprintf "Content-MD5: %s" v
-      | ContentRange v -> Printf.sprintf "Content-Range: %s" v
-      | ContentType v -> Printf.sprintf "Content-Type: %s" v
-      | Expires v -> Printf.sprintf "Expires: %s" v
-      | LastModified v -> Printf.sprintf "Last-Modified: %s" v)
+  | CacheControl v -> Printf.sprintf "Cache-Control: %s" v
+  | Connection v -> Printf.sprintf "Connection: %s" v
+  | Date v -> Printf.sprintf "Date: %s" v
+  | Pragma v -> Printf.sprintf "Pragma: %s" v
+  | Trailer v -> Printf.sprintf "Trailer: %s" v
+  | TransferEncoding v -> Printf.sprintf "Transfer-Encoding: %s" v
+  | Upgrade v -> Printf.sprintf "Upgrade: %s" v
+  | Via v -> Printf.sprintf "Via: %s" v
+  | Warning v -> Printf.sprintf "Warning: %s" v
+  | Accept v -> Printf.sprintf "Accept: %s" v
+  | AcceptCharset v -> Printf.sprintf "Accept-Charset: %s" v
+  | AcceptEncoding v -> Printf.sprintf "Accept-Encoding: %s" v
+  | AcceptLanguage v -> Printf.sprintf "Accept-Language: %s" v
+  | Authorization v -> Printf.sprintf "Authorization: %s" v
+  | Expect v -> Printf.sprintf "Expect: %s" v
+  | From v -> Printf.sprintf "From: %s" v
+  | Host v -> Printf.sprintf "Host: %s" v
+  | IfMatch v -> Printf.sprintf "If-Match: %s" v
+  | IfModifiedSince v -> Printf.sprintf "If-Modified-Since: %s" v
+  | IfNoneMatch v -> Printf.sprintf "If-None-Match: %s" v
+  | IfRange v -> Printf.sprintf "If-Range: %s" v
+  | IfUnmodifiedSince v -> Printf.sprintf "If-Unmodified-Since: %s" v
+  | MaxForwards v -> Printf.sprintf "Max-Forwards: %s" v
+  | ProxyAuthorization v -> Printf.sprintf "Proxy-Authorization: %s" v
+  | Range v -> Printf.sprintf "Range: %s" v
+  | Referer v -> Printf.sprintf "Referer: %s" v
+  | TE v -> Printf.sprintf "TE: %s" v
+  | UserAgent v -> Printf.sprintf "User-Agent: %s" v
+  | Allow v -> Printf.sprintf "Allow: %s" v
+  | ContentEncoding v -> Printf.sprintf "Content-Encoding: %s" v
+  | ContentLanguage v -> Printf.sprintf "Content-Language: %s" v
+  | ContentLength v -> Printf.sprintf "Content-Length: %s" v
+  | ContentLocation v -> Printf.sprintf "Content-Location: %s" v
+  | ContentMD5 v -> Printf.sprintf "Content-MD5: %s" v
+  | ContentRange v -> Printf.sprintf "Content-Range: %s" v
+  | ContentType v -> Printf.sprintf "Content-Type: %s" v
+  | Expires v -> Printf.sprintf "Expires: %s" v
+  | LastModified v -> Printf.sprintf "Last-Modified: %s" v
 
 let http_headers_to_string headers =
   List.map http_header_to_string headers
@@ -274,49 +249,46 @@ let parse_header header =
   let header_parts = String.split_on_char ':' header in
   match header_parts with
   | [ header_name; header_value ] -> (
-      let header_value = String.trim header_value in
+      let value = String.trim header_value in
       match String.lowercase_ascii header_name with
-      | "cache-control" -> Ok (GeneralHeader (CacheControl header_value))
-      | "connection" -> Ok (GeneralHeader (Connection header_value))
-      | "date" -> Ok (GeneralHeader (Date header_value))
-      | "pragma" -> Ok (GeneralHeader (Pragma header_value))
-      | "trailer" -> Ok (GeneralHeader (Trailer header_value))
-      | "transfer-encoding" ->
-          Ok (GeneralHeader (TransferEncoding header_value))
-      | "upgrade" -> Ok (GeneralHeader (Upgrade header_value))
-      | "via" -> Ok (GeneralHeader (Via header_value))
-      | "warning" -> Ok (GeneralHeader (Warning header_value))
-      | "accept" -> Ok (RequestHeader (Accept header_value))
-      | "accept-charset" -> Ok (RequestHeader (AcceptCharset header_value))
-      | "accept-encoding" -> Ok (RequestHeader (AcceptEncoding header_value))
-      | "accept-language" -> Ok (RequestHeader (AcceptLanguage header_value))
-      | "authorization" -> Ok (RequestHeader (Authorization header_value))
-      | "expect" -> Ok (RequestHeader (Expect header_value))
-      | "from" -> Ok (RequestHeader (From header_value))
-      | "host" -> Ok (RequestHeader (Host header_value))
-      | "if-match" -> Ok (RequestHeader (IfMatch header_value))
-      | "if-modifiedsince" -> Ok (RequestHeader (IfModifiedSince header_value))
-      | "if-nonematch" -> Ok (RequestHeader (IfNoneMatch header_value))
-      | "if-range" -> Ok (RequestHeader (IfRange header_value))
-      | "if-unmodifiedsince" ->
-          Ok (RequestHeader (IfUnmodifiedSince header_value))
-      | "max-forwards" -> Ok (RequestHeader (MaxForwards header_value))
-      | "proxy-authorization" ->
-          Ok (RequestHeader (ProxyAuthorization header_value))
-      | "range" -> Ok (RequestHeader (Range header_value))
-      | "referer" -> Ok (RequestHeader (Referer header_value))
-      | "te" -> Ok (RequestHeader (TE header_value))
-      | "user-agent" -> Ok (RequestHeader (UserAgent header_value))
-      | "allow" -> Ok (EntityHeader (Allow header_value))
-      | "content-encoding" -> Ok (EntityHeader (ContentEncoding header_value))
-      | "content-language" -> Ok (EntityHeader (ContentLanguage header_value))
-      | "content-length" -> Ok (EntityHeader (ContentLength header_value))
-      | "content-location" -> Ok (EntityHeader (ContentLocation header_value))
-      | "content-md5" -> Ok (EntityHeader (ContentMD5 header_value))
-      | "content-range" -> Ok (EntityHeader (ContentRange header_value))
-      | "content-type" -> Ok (EntityHeader (ContentType header_value))
-      | "expires" -> Ok (EntityHeader (Expires header_value))
-      | "last-modified" -> Ok (EntityHeader (LastModified header_value))
+      | "cache-control" -> Ok (CacheControl value)
+      | "connection" -> Ok (Connection value)
+      | "date" -> Ok (Date value)
+      | "pragma" -> Ok (Pragma value)
+      | "trailer" -> Ok (Trailer value)
+      | "transfer-encoding" -> Ok (TransferEncoding value)
+      | "upgrade" -> Ok (Upgrade value)
+      | "via" -> Ok (Via value)
+      | "warning" -> Ok (Warning value)
+      | "accept" -> Ok (Accept value)
+      | "accept-charset" -> Ok (AcceptCharset value)
+      | "accept-encoding" -> Ok (AcceptEncoding value)
+      | "accept-language" -> Ok (AcceptLanguage value)
+      | "authorization" -> Ok (Authorization value)
+      | "expect" -> Ok (Expect value)
+      | "from" -> Ok (From value)
+      | "host" -> Ok (Host value)
+      | "if-match" -> Ok (IfMatch value)
+      | "if-modifiedsince" -> Ok (IfModifiedSince value)
+      | "if-nonematch" -> Ok (IfNoneMatch value)
+      | "if-range" -> Ok (IfRange value)
+      | "if-unmodifiedsince" -> Ok (IfUnmodifiedSince value)
+      | "max-forwards" -> Ok (MaxForwards value)
+      | "proxy-authorization" -> Ok (ProxyAuthorization value)
+      | "range" -> Ok (Range value)
+      | "referer" -> Ok (Referer value)
+      | "te" -> Ok (TE value)
+      | "user-agent" -> Ok (UserAgent value)
+      | "allow" -> Ok (Allow value)
+      | "content-encoding" -> Ok (ContentEncoding value)
+      | "content-language" -> Ok (ContentLanguage value)
+      | "content-length" -> Ok (ContentLength value)
+      | "content-location" -> Ok (ContentLocation value)
+      | "content-md5" -> Ok (ContentMD5 value)
+      | "content-range" -> Ok (ContentRange value)
+      | "content-type" -> Ok (ContentType value)
+      | "expires" -> Ok (Expires value)
+      | "last-modified" -> Ok (LastModified value)
       | _ -> Error Unknown_header)
   | _ -> Error Malformed_header
 
@@ -403,10 +375,9 @@ let process_http_request req =
     (fun req ->
       let body = pretty_print_http_request req in
       let headers : header list = [] in
-      let headers = GeneralHeader (Connection "keep-alive") :: headers in
+      let headers = Connection "keep-alive" :: headers in
       let headers =
-        EntityHeader (ContentLength (String.length body |> string_of_int))
-        :: headers
+        ContentLength (String.length body |> string_of_int) :: headers
       in
       {
         status_line =
