@@ -1,3 +1,0 @@
-(library
- (name http_response)
- (libraries http_header http_status_line))
