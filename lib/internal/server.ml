@@ -117,7 +117,7 @@ let rec accept_connections server_socket threads =
             m "Failed to accept client connection %s" (server_error_to_string e));
         accept_connections server_socket threads
 
-let run_server port =
+let run port =
   let server_socket = create_server_socket port in
   match server_socket with
   | Ok socket ->

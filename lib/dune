@@ -1,4 +1,5 @@
 (library
  (name erg)
  (public_name erg)
- (libraries logs unix threads))
+ (libraries erg_internal)
+ (modules erg))
