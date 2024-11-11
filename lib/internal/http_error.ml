@@ -12,3 +12,4 @@ let to_string err =
   | Malformed_header -> "Malformed_header"
   | Unknown_method -> "Unknown_method"
   | Unknown_header -> "Unknown_header"
+;;

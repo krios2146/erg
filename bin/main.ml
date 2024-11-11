@@ -2,5 +2,4 @@
 Fmt_tty.setup_std_outputs ();
 Logs.set_level (Some Logs.Debug);
 Logs.set_reporter (Logs_fmt.reporter ());
-
 Erg.start 8080

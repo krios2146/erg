@@ -1,4 +1,12 @@
-type t = Options | Get | Head | Post | Put | Delete | Trace | Connect
+type t =
+  | Options
+  | Get
+  | Head
+  | Post
+  | Put
+  | Delete
+  | Trace
+  | Connect
 
 let from_string http_method =
   match http_method with
@@ -11,6 +19,7 @@ let from_string http_method =
   | "TRACE" -> Ok Trace
   | "CONNECT" -> Ok Connect
   | _ -> Error Http_error.Unknown_method
+;;
 
 let to_string http_method =
   match http_method with
@@ -22,3 +31,4 @@ let to_string http_method =
   | Delete -> "DELETE"
   | Trace -> "TRACE"
   | Connect -> "CONNECT"
+;;

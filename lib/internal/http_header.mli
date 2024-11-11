@@ -41,11 +41,11 @@ type t =
   | Expires of string
   | LastModified of string
 
-val from_string : string -> (t, Http_error.t) result
 (** Parses HTTP header from the string *)
+val from_string : string -> (t, Http_error.t) result
 
-val to_string : t -> string
 (** Format the HTTP header to the string to be used in HTTP response *)
+val to_string : t -> string
 
-val pretty_print : t -> string
 (** Pretty prints HTTP header. For debug purposes only, do not use in any other way *)
+val pretty_print : t -> string
