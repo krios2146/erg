@@ -23,22 +23,25 @@ let write_http_response socket resp =
   flush socket_out_channel
 ;;
 
-let process_http_request req =
-  Result.map
-    (fun req ->
-      let body = Http_request.pretty_print req in
-      let headers : Http_header.t list = [] in
-      let headers = Http_header.Connection "keep-alive" :: headers in
-      let headers =
-        Http_header.ContentLength (String.length body |> string_of_int) :: headers
-      in
-      let open Http_response in
-      { status_line =
-          { http_version; status_code = 501; reason_phrase = "Not Implemented" }
-      ; headers
-      ; message_body = body
-      })
-    req
+let rec process_http_request handlers req =
+  let open Http_request in
+  match req with
+  | Error e -> Error e
+  | Ok req ->
+    let uri = req.request_line.request_uri in
+    let handler = Handlers.find_by_uri handlers uri in
+    (match handler with
+     | None ->
+       Log.warn (fun m -> m "No handlers found for URI: %s \nResponding 404" uri);
+       Ok produce_404_response
+     | Some h -> Ok (h.handler_func req))
+
+and produce_404_response =
+  let open Http_response in
+  { status_line = { http_version; status_code = 404; reason_phrase = "Not Found" }
+  ; headers = []
+  ; message_body = ""
+  }
 ;;
 
 let read_data socket =
@@ -73,13 +76,13 @@ let read_data socket =
 (* TODO: TCP socket close on Connection: close header - 8.1.2.1 *)
 (* TODO: Use of the 100 (Continue) Status - 8.2.3 *)
 (* TODO: Host header handling - 14.23 *)
-let rec handle_client socket =
+let rec handle_client socket handlers =
   read_data socket
   |> Option.map String.of_bytes
   |> Option.map Http_request.from_string
-  |> Option.map process_http_request
+  |> Option.map (process_http_request handlers)
   |> Option.iter (write_http_response socket);
-  handle_client socket
+  handle_client socket handlers
 ;;
 
 let accepting_connections = ref true
@@ -98,7 +101,7 @@ let create_server_socket port =
   | _ -> Error Tcp_socket_error
 ;;
 
-let rec accept_connections server_socket threads =
+let rec accept_connections server_socket threads handlers =
   (* TODO: Timeouts for connections *)
   if not !accepting_connections
   then (
@@ -117,20 +120,22 @@ let rec accept_connections server_socket threads =
         let addr = Unix.string_of_inet_addr addr in
         m "Recieved client connection, address: %s:%d" addr port);
       Unix.set_nonblock client_socket;
-      let thread = Thread.create handle_client client_socket in
-      accept_connections server_socket (thread :: threads)
+      let handle_client = handle_client client_socket in
+      let thread = Thread.create handle_client handlers in
+      accept_connections server_socket (thread :: threads) handlers
     | Error e ->
       Log.warn (fun m ->
         m "Failed to accept client connection %s" (server_error_to_string e));
-      accept_connections server_socket threads)
+      accept_connections server_socket threads handlers)
 ;;
 
-let run port =
+let run port handlers =
+  Log.info (fun m -> m "Run is called");
   let server_socket = create_server_socket port in
   match server_socket with
   | Ok socket ->
     Log.info (fun m -> m "Server listening on port %d" port);
-    accept_connections socket []
+    accept_connections socket [] handlers
   | Error Tcp_address_in_use ->
     Log.error (fun m -> m "Unable to bind TCP socket, port %d already in use" port)
   | Error _ ->
