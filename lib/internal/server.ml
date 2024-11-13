@@ -10,17 +10,20 @@ let server_error_to_string err =
   | Non_tcp_client -> "Non_tcp_client"
 ;;
 
-let http_version = "HTTP/1.1"
-
-let write_http_response socket resp =
+let rec write_http_response socket resp =
   let socket_out_channel = Unix.out_channel_of_descr socket in
   let response =
     match resp with
-    | Ok resp -> Http_response.to_string resp
+    | Ok resp -> Http_response.to_string (add_content_length resp)
     | Error e -> Http_error.to_string e
   in
   output_string socket_out_channel response;
   flush socket_out_channel
+
+and add_content_length (res : Http_response.t) =
+  let body = Bytes.of_string res.message_body in
+  let body_length = Bytes.length body |> string_of_int in
+  Http_response.set_header (Http_header.ContentLength body_length) res
 ;;
 
 let rec process_http_request handlers req =
@@ -32,13 +35,17 @@ let rec process_http_request handlers req =
     let handler = Handlers.find_by_uri handlers uri in
     (match handler with
      | None ->
-       Log.warn (fun m -> m "No handlers found for URI: %s \nResponding 404" uri);
+       Log.warn (fun m -> m "No handlers found for URI: `%s`. Responding 404" uri);
        Ok produce_404_response
      | Some h -> Ok (h.handler_func req))
 
 and produce_404_response =
   let open Http_response in
-  { status_line = { http_version; status_code = 404; reason_phrase = "Not Found" }
+  { status_line =
+      { http_version = Http_notation.http_version
+      ; status_code = 404
+      ; reason_phrase = "Not Found"
+      }
   ; headers = []
   ; message_body = ""
   }

@@ -1,12 +1,4 @@
-open Erg_internal
-
-type http_method =
-  | Get
-  | Post
-  | Put
-  | Delete
-
-type status_code = Erg_internal.Status_code.t =
+type t =
   | Continue (** 100 *)
   | Switching_Protocols (** 101 *)
   | OK (** 200 *)
@@ -47,30 +39,3 @@ type status_code = Erg_internal.Status_code.t =
   | Service_Unavailable (** 503 *)
   | Gateway_Timeout (** 504 *)
   | HTTP_Version_Not_Supported (** 505 *)
-
-type http_request = Http_request.t
-type http_response = Http_response.t
-type handler = Handler.t
-type handlers = Handlers.t
-type header = Http_header.t
-
-let start port handlers = Server.run port handlers
-let empty_handlers = Handlers.empty
-
-let create_handler http_method uri func =
-  let http_method =
-    match http_method with
-    | Get -> Http_method.Get
-    | Post -> Http_method.Post
-    | Put -> Http_method.Put
-    | Delete -> Http_method.Delete
-  in
-  Handler.create_handler http_method uri func
-;;
-
-let add_handler h handlers = Handlers.add_handler h handlers
-let empty_http_response = Http_response.empty
-let set_headers = Http_response.set_headers
-let set_header = Http_response.set_header
-let set_response_body = Http_response.set_response_body
-let set_status_code = Http_response.set_status_code
