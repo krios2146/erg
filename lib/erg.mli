@@ -52,15 +52,17 @@ type status_code = Erg_internal.Status_code.t =
   | Gateway_Timeout (** 504 *)
   | HTTP_Version_Not_Supported (** 505 *)
 
-(** [p] Starts the server listening on the specified port *)
+(** [start port handlers] Starts the server listening on the specified port with specified handlers *)
 val start : int -> handlers -> unit
 
 val empty_handlers : handlers
 
-(** [h handlers] Adds the specified handler to the handlers list *)
+(** [add_handler h handlers] Adds the specified handler to the handlers *)
 val add_handler : handler -> handlers -> handlers
 
-(** [m uri req -> res]
+(* TODO: implement named placeholders *)
+
+(** [create_handler m uri req -> res]
 
     Creates the [handler] for the specified HTTP method on the [uri]
     with function that transforms [http_request] to [http_response]
@@ -68,10 +70,19 @@ val add_handler : handler -> handlers -> handlers
     Named placeholders with syntax \{name\} could be used in [uri] to define path parameters *)
 val create_handler : http_method -> string -> (http_request -> http_response) -> handler
 
+(** [empty_http_response] returns "empty" HTTP response *)
 val empty_http_response : http_response
+
+(** [set_headers h_list res] Sets specified headers to the response, returns response with headers *)
 val set_headers : header list -> http_response -> http_response
+
+(** [set_header h res] Sets specified header to the response, returns response with header *)
 val set_header : header -> http_response -> http_response
+
+(** [set_response_body body res] Sets response body to the response, returns response with a body *)
 val set_response_body : string -> http_response -> http_response
+
+(** [set_status_code code res] Sets status code for the response, returns response with specified status code *)
 val set_status_code : status_code -> http_response -> http_response
 
 (* TODO: implement *)
