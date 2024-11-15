@@ -6,3 +6,6 @@ type t =
 
 val from_string : string -> (t, Http_error.t) result
 val pretty_print : t -> string
+val headers : t -> Http_header.t list
+val body : t -> string
+val query : t -> string option

@@ -31,7 +31,7 @@ let rec process_http_request handlers req =
   match req with
   | Error e -> Error e
   | Ok req ->
-    let uri = req.request_line.request_uri in
+    let uri = req.request_line.request_uri |> remove_query in
     let handler = Handlers.find_by_uri handlers uri in
     (match handler with
      | None ->
@@ -49,6 +49,11 @@ and produce_404_response =
   ; headers = []
   ; message_body = ""
   }
+
+and remove_query uri =
+  match String.split_on_char '?' uri with
+  | [ uri; _ ] -> uri
+  | _ -> uri
 ;;
 
 let read_data socket =

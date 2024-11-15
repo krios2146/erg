@@ -72,3 +72,13 @@ let pretty_print http_request =
     (pretty_print_headers http_request.headers)
     http_request.message_body
 ;;
+
+let headers req = req.headers
+let body req = req.message_body
+
+let query req =
+  let req_uri = req.request_line.request_uri in
+  match split_on_first "?" req_uri with
+  | None -> None
+  | Some (_, query) -> Some query
+;;

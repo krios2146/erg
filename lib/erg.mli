@@ -4,11 +4,48 @@ type http_method =
   | Put
   | Delete
 
-type http_request
-type http_response
-type handler
-type handlers
-type header
+type header = Erg_internal.Http_header.t =
+  (* General Headers *)
+  | CacheControl of string
+  | Connection of string
+  | Date of string
+  | Pragma of string
+  | Trailer of string
+  | TransferEncoding of string
+  | Upgrade of string
+  | Via of string
+  | Warning of string
+  (* Request Headers *)
+  | Accept of string
+  | AcceptCharset of string
+  | AcceptEncoding of string
+  | AcceptLanguage of string
+  | Authorization of string
+  | Expect of string
+  | From of string
+  | Host of string
+  | IfMatch of string
+  | IfModifiedSince of string
+  | IfNoneMatch of string
+  | IfRange of string
+  | IfUnmodifiedSince of string
+  | MaxForwards of string
+  | ProxyAuthorization of string
+  | Range of string
+  | Referer of string
+  | TE of string
+  | UserAgent of string
+  (* Entity Headers *)
+  | Allow of string
+  | ContentEncoding of string
+  | ContentLanguage of string
+  | ContentLength of string
+  | ContentLocation of string
+  | ContentMD5 of string
+  | ContentRange of string
+  | ContentType of string
+  | Expires of string
+  | LastModified of string
 
 type status_code = Erg_internal.Status_code.t =
   | Continue (** 100 *)
@@ -52,6 +89,11 @@ type status_code = Erg_internal.Status_code.t =
   | Gateway_Timeout (** 504 *)
   | HTTP_Version_Not_Supported (** 505 *)
 
+type http_request
+type http_response
+type handler
+type handlers
+
 (** [start port handlers] Starts the server listening on the specified port with specified handlers *)
 val start : int -> handlers -> unit
 
@@ -70,7 +112,7 @@ val add_handler : handler -> handlers -> handlers
     Named placeholders with syntax \{name\} could be used in [uri] to define path parameters *)
 val create_handler : http_method -> string -> (http_request -> http_response) -> handler
 
-(** [empty_http_response] returns "empty" HTTP response *)
+(** [empty_http_response] Returns "empty" HTTP response *)
 val empty_http_response : http_response
 
 (** [set_headers h_list res] Sets specified headers to the response, returns response with headers *)
@@ -85,10 +127,11 @@ val set_response_body : string -> http_response -> http_response
 (** [set_status_code code res] Sets status code for the response, returns response with specified status code *)
 val set_status_code : status_code -> http_response -> http_response
 
-(* TODO: implement *)
+(** [get_param req param] Retrieves the optional GET parameter from the request's query *)
+(* val get_param : http_request -> string -> string option *)
 
-(** [req q] Retrieves the optional query from request *)
-(* val query : http_request -> string -> string option *)
+(** [query req] Retrieves the optional query from request, i.e. everything after the [?] sign in URI *)
+val query : http_request -> string option
 
 (* TODO: implement *)
 

@@ -52,7 +52,49 @@ type http_request = Http_request.t
 type http_response = Http_response.t
 type handler = Handler.t
 type handlers = Handlers.t
-type header = Http_header.t
+
+type header = Erg_internal.Http_header.t =
+  (* General Headers *)
+  | CacheControl of string
+  | Connection of string
+  | Date of string
+  | Pragma of string
+  | Trailer of string
+  | TransferEncoding of string
+  | Upgrade of string
+  | Via of string
+  | Warning of string
+  (* Request Headers *)
+  | Accept of string
+  | AcceptCharset of string
+  | AcceptEncoding of string
+  | AcceptLanguage of string
+  | Authorization of string
+  | Expect of string
+  | From of string
+  | Host of string
+  | IfMatch of string
+  | IfModifiedSince of string
+  | IfNoneMatch of string
+  | IfRange of string
+  | IfUnmodifiedSince of string
+  | MaxForwards of string
+  | ProxyAuthorization of string
+  | Range of string
+  | Referer of string
+  | TE of string
+  | UserAgent of string
+  (* Entity Headers *)
+  | Allow of string
+  | ContentEncoding of string
+  | ContentLanguage of string
+  | ContentLength of string
+  | ContentLocation of string
+  | ContentMD5 of string
+  | ContentRange of string
+  | ContentType of string
+  | Expires of string
+  | LastModified of string
 
 let start port handlers = Server.run port handlers
 let empty_handlers = Handlers.empty
@@ -74,3 +116,5 @@ let set_headers = Http_response.set_headers
 let set_header = Http_response.set_header
 let set_response_body = Http_response.set_response_body
 let set_status_code = Http_response.set_status_code
+let query = Http_request.query
+(* let get_param = Http_request.get_param *)
