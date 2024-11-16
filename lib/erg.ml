@@ -117,3 +117,4 @@ let set_header = Http_response.set_header
 let set_response_body = Http_response.set_response_body
 let set_status_code = Http_response.set_status_code
 let get_param = Http_request.get_param
+let get_headers = Http_request.get_headers

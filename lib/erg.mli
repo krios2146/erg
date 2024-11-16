@@ -130,6 +130,9 @@ val set_status_code : status_code -> http_response -> http_response
 (** [get_param req param] Retrieves the optional GET parameter from the request's query *)
 val get_param : http_request -> string -> string option
 
+(** [get_headers req] Retrieves all headers from the request *)
+val get_headers : http_request -> header list
+
 (* TODO: implement *)
 
 (** [req param] Retrieves the optional path param from request *)

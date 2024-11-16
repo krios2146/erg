@@ -10,8 +10,25 @@ let handler =
       | None -> "No some parameter"
       | Some q -> "some parameter is: " ^ q
     in
+    let headers =
+      Erg.get_headers req
+      |> List.map Erg_internal.Http_header.pretty_print
+      |> List.map (String.split_on_char ':')
+      |> List.map (fun h ->
+        let header = List.nth h 1 |> String.trim in
+        let value = List.nth h 2 in
+        Printf.sprintf "\"%s\": %s;" header value)
+      |> List.fold_left (fun acc h -> acc ^ h ^ "\n\t\t") String.empty
+    in
     let response =
-      Printf.sprintf "{\n\t\"message\": \"It's working\";\n\t\"query\": \"%s\";}" query
+      Printf.sprintf
+        "{\n\
+         \t\"message\": \"It's working\";\n\
+         \t\"query\": \"%s\";\n\
+         \t\"headers\": [%s];\n\
+         }"
+        query
+        headers
     in
     Erg.empty_http_response
     |> Erg.set_status_code Erg.OK

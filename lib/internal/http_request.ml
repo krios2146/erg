@@ -80,3 +80,5 @@ let get_param req param =
   let params = req.request_line.query in
   Query.get param params
 ;;
+
+let get_headers req = req.headers

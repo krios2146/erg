@@ -9,3 +9,4 @@ val pretty_print : t -> string
 val headers : t -> Http_header.t list
 val body : t -> string
 val get_param : t -> string -> string option
+val get_headers : t -> Http_header.t list
