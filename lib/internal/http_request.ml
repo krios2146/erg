@@ -76,9 +76,7 @@ let pretty_print http_request =
 let headers req = req.headers
 let body req = req.message_body
 
-let query req =
-  let req_uri = req.request_line.request_uri in
-  match split_on_first "?" req_uri with
-  | None -> None
-  | Some (_, query) -> Some query
+let get_param req param =
+  let params = req.request_line.query in
+  Query.get param params
 ;;

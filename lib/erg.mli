@@ -97,7 +97,7 @@ type handlers
 (** [start port handlers] Starts the server listening on the specified port with specified handlers *)
 val start : int -> handlers -> unit
 
-val empty_handlers : handlers
+val empty_handlers : unit -> handlers
 
 (** [add_handler h handlers] Adds the specified handler to the handlers *)
 val add_handler : handler -> handlers -> handlers
@@ -128,10 +128,7 @@ val set_response_body : string -> http_response -> http_response
 val set_status_code : status_code -> http_response -> http_response
 
 (** [get_param req param] Retrieves the optional GET parameter from the request's query *)
-(* val get_param : http_request -> string -> string option *)
-
-(** [query req] Retrieves the optional query from request, i.e. everything after the [?] sign in URI *)
-val query : http_request -> string option
+val get_param : http_request -> string -> string option
 
 (* TODO: implement *)
 

@@ -19,7 +19,11 @@ let parse_http_request_test_valid_request test_ctxt =
   let expected =
     Ok
       { request_line =
-          { http_method = Post; request_uri = "/currencies"; http_version = "HTTP/1.1" }
+          { http_method = Post
+          ; request_uri = "/currencies"
+          ; http_version = "HTTP/1.1"
+          ; query = Query.empty ()
+          }
       ; headers =
           [ UserAgent "PostmanRuntime/7.42.0"
           ; Accept "*/*"
@@ -50,7 +54,11 @@ let parse_http_request_test_no_headers test_ctxt =
     let open Http_request in
     Ok
       { request_line =
-          { http_method = Post; request_uri = "/currencies"; http_version = "HTTP/1.1" }
+          { http_method = Post
+          ; request_uri = "/currencies"
+          ; http_version = "HTTP/1.1"
+          ; query = Query.empty ()
+          }
       ; headers = []
       ; message_body = "name=Czech%20Koruna&code=CZK&sign=K%C4%8D"
       }

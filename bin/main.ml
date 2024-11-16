@@ -2,13 +2,13 @@
 Fmt_tty.setup_std_outputs ();
 Logs.set_level (Some Logs.Debug);
 Logs.set_reporter (Logs_fmt.reporter ());
-let handlers = Erg.empty_handlers in
+let handlers = Erg.empty_handlers () in
 let handler =
   Erg.create_handler Erg.Get "/currencies" (fun req ->
     let query =
-      match Erg.query req with
-      | None -> "no query"
-      | Some q -> q
+      match Erg.get_param req "some" with
+      | None -> "No some parameter"
+      | Some q -> "some parameter is: " ^ q
     in
     let response =
       Printf.sprintf "{\n\t\"message\": \"It's working\";\n\t\"query\": \"%s\";}" query

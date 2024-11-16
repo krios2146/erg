@@ -89,11 +89,14 @@ let read_data socket =
 (* TODO: Use of the 100 (Continue) Status - 8.2.3 *)
 (* TODO: Host header handling - 14.23 *)
 let rec handle_client socket handlers =
-  read_data socket
-  |> Option.map String.of_bytes
-  |> Option.map Http_request.from_string
-  |> Option.map (process_http_request handlers)
-  |> Option.iter (write_http_response socket);
+  (match read_data socket with
+   | None -> ()
+   | Some bytes ->
+     bytes
+     |> String.of_bytes
+     |> Http_request.from_string
+     |> process_http_request handlers
+     |> write_http_response socket);
   handle_client socket handlers
 ;;
 
