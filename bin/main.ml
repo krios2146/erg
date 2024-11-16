@@ -20,15 +20,18 @@ let handler =
         Printf.sprintf "\"%s\": %s;" header value)
       |> List.fold_left (fun acc h -> acc ^ h ^ "\n\t\t") String.empty
     in
+    let req_body = Erg.get_body req in
     let response =
       Printf.sprintf
         "{\n\
          \t\"message\": \"It's working\";\n\
          \t\"query\": \"%s\";\n\
          \t\"headers\": [%s];\n\
+         \t\"body\": \"%s\";\n\
          }"
         query
         headers
+        req_body
     in
     Erg.empty_http_response
     |> Erg.set_status_code Erg.OK

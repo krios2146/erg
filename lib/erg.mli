@@ -133,6 +133,9 @@ val get_param : http_request -> string -> string option
 (** [get_headers req] Retrieves all headers from the request *)
 val get_headers : http_request -> header list
 
+(** [get_body req] Retrieves untrimmed body of the request as a string *)
+val get_body : http_request -> string
+
 (* TODO: implement *)
 
 (** [req param] Retrieves the optional path param from request *)

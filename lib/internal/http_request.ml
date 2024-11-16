@@ -82,3 +82,4 @@ let get_param req param =
 ;;
 
 let get_headers req = req.headers
+let get_body req = req.message_body
