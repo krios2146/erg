@@ -1,4 +1,0 @@
-(executable
- (public_name erg)
- (name main)
- (libraries erg logs logs.fmt fmt.tty))
