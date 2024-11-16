@@ -102,14 +102,10 @@ val empty_handlers : unit -> handlers
 (** [add_handler h handlers] Adds the specified handler to the handlers *)
 val add_handler : handler -> handlers -> handlers
 
-(* TODO: implement named placeholders *)
-
 (** [create_handler m uri req -> res]
 
     Creates the [handler] for the specified HTTP method on the [uri]
-    with function that transforms [http_request] to [http_response]
-
-    Named placeholders with syntax \{name\} could be used in [uri] to define path parameters *)
+    with function that transforms [http_request] to [http_response] *)
 val create_handler : http_method -> string -> (http_request -> http_response) -> handler
 
 (** [empty_http_response] Returns "empty" HTTP response *)
@@ -135,8 +131,3 @@ val get_headers : http_request -> header list
 
 (** [get_body req] Retrieves untrimmed body of the request as a string *)
 val get_body : http_request -> string
-
-(* TODO: implement *)
-
-(** [req param] Retrieves the optional path param from request *)
-(* val path_param : http_request -> string -> string option *)
