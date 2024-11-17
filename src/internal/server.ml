@@ -27,17 +27,19 @@ and add_content_length (res : Http_response.t) =
 ;;
 
 let rec process_http_request handlers req =
-  let open Http_request in
   match req with
   | Error e -> Error e
   | Ok req ->
-    let uri = req.request_line.request_uri |> remove_query in
+    let uri = Http_request.(req.request_line.request_uri) |> remove_query in
+    let req_http_method = req.request_line.http_method in
     let handler = Handlers.find_by_uri handlers uri in
     (match handler with
-     | None ->
-       Log.warn (fun m -> m "No handlers found for URI: `%s`. Responding 404" uri);
-       Ok produce_404_response
-     | Some h -> Ok (h.handler_func req))
+     | Some h when h.http_method = req_http_method -> Ok (h.handler_func req)
+     | _ ->
+       Log.warn (fun m ->
+         let http_method = Http_method.to_string req_http_method in
+         m "No handlers found for URI: %s `%s`. Responding 404" http_method uri);
+       Ok produce_404_response)
 
 and produce_404_response =
   let open Http_response in
