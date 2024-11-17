@@ -98,7 +98,7 @@ end
 module Http_response : sig
   type t
 
-  (** [empty_http_response] Returns "empty" HTTP response *)
+  (** [empty] Returns "empty" HTTP response that must be filled with at least status code *)
   val empty : t
 
   (** [set_headers res h_list] Sets specified headers to the response, returns response with headers *)
@@ -130,9 +130,7 @@ end
 type handler
 type handlers
 
-(** [start port handlers] Starts the server listening on the specified port with specified handlers *)
-val start : int -> handlers -> unit
-
+(** [empty_handlers] Returns empty handlers that should be filled with handlers with [add_handler] *)
 val empty_handlers : unit -> handlers
 
 (** [add_handler h handlers] Adds the specified handler to the handlers *)
@@ -147,3 +145,6 @@ val create_handler
   -> string
   -> (Http_request.t -> Http_response.t)
   -> handler
+
+(** [start port handlers] Starts the server listening on the specified port with specified handlers *)
+val start : int -> handlers -> unit
